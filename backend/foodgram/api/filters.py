@@ -5,24 +5,25 @@ from recipes.models import Recipe, Tag
 
 
 class IngredientFilter(SearchFilter):
-    search_param = 'name'
+    search_param = "name"
 
 
 class RecipeFilter(filter.FilterSet):
     author = filter.CharFilter()
     tags = filter.ModelMultipleChoiceFilter(
-        field_name='tags__slug',
+        field_name="tags__slug",
         queryset=Tag.objects.all(),
-        label='Tags',
-        to_field_name='slug'
+        label="Tags",
+        to_field_name="slug",
     )
-    is_favorited = filter.BooleanFilter(method='get_favorite')
+    is_favorited = filter.BooleanFilter(method="get_favorite")
     is_in_shopping_cart = filter.BooleanFilter(
-        method='get_is_in_shopping_cart')
+        method="get_is_in_shopping_cart"
+    )
 
     class Meta:
         model = Recipe
-        fields = ['tags', 'author', 'is_favorited', 'is_in_shopping_cart']
+        fields = ["tags", "author", "is_favorited", "is_in_shopping_cart"]
 
     def get_favorite(self, queryset, name, value):
         if value:

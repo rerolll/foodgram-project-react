@@ -5,20 +5,31 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('recipes', '0005_auto_20220628_2331'),
+        ("recipes", "0005_auto_20220628_2331"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='recipe',
-            name='cooking_time',
-            field=models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1, message='Время готовки должно быть не менее 1 минуты!')], verbose_name='Время приготовления'),
+            model_name="recipe",
+            name="cooking_time",
+            field=models.PositiveIntegerField(
+                validators=[
+                    django.core.validators.MinValueValidator(
+                        1,
+                        message="Время готовки должно быть не менее 1 минуты!",
+                    )
+                ],
+                verbose_name="Время приготовления",
+            ),
         ),
         migrations.AlterField(
-            model_name='recipe',
-            name='ingredients',
-            field=models.ManyToManyField(through='recipes.RecipeIngredient', to='recipes.Ingredient', verbose_name='Ингредиенты'),
+            model_name="recipe",
+            name="ingredients",
+            field=models.ManyToManyField(
+                through="recipes.RecipeIngredient",
+                to="recipes.Ingredient",
+                verbose_name="Ингредиенты",
+            ),
         ),
     ]

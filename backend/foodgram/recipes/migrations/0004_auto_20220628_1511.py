@@ -4,19 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('recipes', '0003_alter_recipe_cooking_time'),
+        ("recipes", "0003_alter_recipe_cooking_time"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='ingredient',
-            name='name',
-            field=models.CharField(max_length=200, verbose_name='Название ингредиента'),
+            model_name="ingredient",
+            name="name",
+            field=models.CharField(
+                max_length=200, verbose_name="Название ингредиента"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='ingredient',
-            constraint=models.UniqueConstraint(fields=('name', 'measurement_unit'), name='ingredient_name_unit_unique'),
+            model_name="ingredient",
+            constraint=models.UniqueConstraint(
+                fields=("name", "measurement_unit"),
+                name="ingredient_name_unit_unique",
+            ),
         ),
     ]
