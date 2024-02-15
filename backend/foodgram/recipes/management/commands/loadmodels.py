@@ -6,29 +6,19 @@ from recipes.models import Ingredient, Tag
 
 
 class Command(BaseCommand):
-    def add_arguments(self, parser):
-        parser.add_argument("--path", type=str, help="file path")
 
     def handle(self, *args, **options):
-        file_path = options["path"]
+        self.stdout.write(self.style.WARNING('Старт команды'))
+        with open('data/ingredients.json', encoding='utf-8',
+                  ) as data_file_ingredients:
+            ingredient_data = json.loads(data_file_ingredients.read())
+            for ingredients in ingredient_data:
+                Ingredient.objects.get_or_create(**ingredients)
 
-        with open(file_path, encoding="utf-8") as f:
-            jsondata = json.load(f)
-            if "color" in jsondata[0]:
-                for line in jsondata:
-                    if not Tag.objects.filter(slug=line["slug"]).exists():
-                        Tag.objects.create(
-                            name=line["name"],
-                            color=line["color"],
-                            slug=line["slug"],
-                        )
-            elif "measurement_unit" in jsondata[0]:
-                for line in jsondata:
-                    if not Ingredient.objects.filter(
-                        name=line["name"],
-                        measurement_unit=line["measurement_unit"],
-                    ).exists():
-                        Ingredient.objects.create(
-                            name=line["name"],
-                            measurement_unit=line["measurement_unit"],
-                        )
+        with open('data/tags.json', encoding='utf-8',
+                  ) as data_file_tags:
+            tags_data = json.loads(data_file_tags.read())
+            for tags in tags_data:
+                Tag.objects.get_or_create(**tags)
+
+        self.stdout.write(self.style.SUCCESS('Success'))
