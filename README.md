@@ -7,10 +7,10 @@
 - http://sadsa123.ddns.net/
 ```
 
-##Технологии:
+## Технологии:
 Python, Django, Django Rest Framework, Docker, Gunicorn, NGINX, PostgreSQL, Yandex Cloud, Continuous Integration, Continuous Deployment
 
-##«Фудграм» - проект позволяет:
+## «Фудграм» - проект позволяет:
 
 - Просматривать рецепты
 - Добавлять рецепты в избранное
