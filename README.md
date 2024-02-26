@@ -94,3 +94,9 @@ sudo docker compose exec backend python manage.py loadmodels
 ```
 sudo docker compose stop         # без удаления
 ```
+
+## Данные superuser
+```
+Почта=1@mail.ru
+Пароль=Password11
+```
