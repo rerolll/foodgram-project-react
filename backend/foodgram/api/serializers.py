@@ -1,10 +1,18 @@
+from django.core.validators import MinValueValidator
+
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    RecipeTag,
+    ShoppingCart,
+    Tag
+)
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            RecipeTag, ShoppingCart, Tag)
 from users.models import Subscription, User
 
 
@@ -124,7 +132,13 @@ class AddIngredientRecipeSerializer(serializers.ModelSerializer):
     """Сериализатор добавления ингредиента в рецепт."""
 
     id = serializers.IntegerField()
-    amount = serializers.IntegerField()
+    amount = serializers.amount = serializers.IntegerField(
+        validators=(
+            MinValueValidator(
+                1, message="Количество ингредиента должно быть 1 или более."
+            ),
+        )
+    )
 
     class Meta:
         model = RecipeIngredient
