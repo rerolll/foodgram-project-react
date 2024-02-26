@@ -1,4 +1,4 @@
-![example workflow](https://github.com/rerolll/foodgram-project-react/actions/workflows/main.yml/badge.svg)
+![example workflow](https://github.com/rerolll/foodgram-project-react/actions/workflows/foodgram_workflow.yml/badge.svg)
 # «Фудграм» — сайт, на котором пользователи могут публиковать рецепты, добавлять чужие рецепты в избранное и подписываться на публикации других авторов. Пользователям сайта также будет доступен сервис «Список покупок». Он позволит создавать список продуктов, которые нужно купить для приготовления выбранных блюд.
 
 ## Проект доступен по ссылке:
