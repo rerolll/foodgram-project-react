@@ -16,6 +16,8 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ["username", "first_name", "last_name"]
 
     class Meta:
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
         ordering = ["-pk"]
 
     def __str__(self):
@@ -37,6 +39,8 @@ class Subscription(models.Model):
     )
 
     class Meta:
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
         constraints = [
             UniqueConstraint(
                 fields=["user", "author"], name="user_author_unique"
