@@ -10,7 +10,7 @@ from .views import (
     ShowSubscriptionsView,
     SubscribeView,
     TagViewSet,
-    download_shopping_cart
+    download_shopping_cart,
 )
 
 app_name = "api"

@@ -6,9 +6,18 @@ from django.db.models import UniqueConstraint
 User = get_user_model()
 
 
+MIN_VALUE_INGREDIENTS = 1
+MIN_COOKING_TIME = 1
+MAX_LENGTH_NAME = 200
+MAX_COLOR_LENGTH = 7
+MAX_SLUG_LENGTH = 200
+
+
 class Ingredient(models.Model):
-    name = models.CharField("Название ингредиента", max_length=200)
-    measurement_unit = models.CharField("Единицы измерения", max_length=200)
+    name = models.CharField("Название ингредиента", max_length=MAX_LENGTH_NAME)
+    measurement_unit = models.CharField(
+        "Единицы измерения", max_length=MAX_SLUG_LENGTH
+    )
 
     class Meta:
         ordering = ["name"]
@@ -23,9 +32,11 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField("Название тега", unique=True, max_length=200)
-    color = models.CharField("Цвет", unique=True, max_length=7)
-    slug = models.SlugField("Slug", unique=True, max_length=200)
+    name = models.CharField(
+        "Название тега", unique=True, max_length=MAX_LENGTH_NAME
+    )
+    color = models.CharField("Цвет", unique=True, max_length=MAX_COLOR_LENGTH)
+    slug = models.SlugField("Slug", unique=True, max_length=MAX_SLUG_LENGTH)
 
     class Meta:
         ordering = ["name"]
@@ -50,7 +61,7 @@ class Recipe(models.Model):
         Ingredient, through="RecipeIngredient", verbose_name="Ингредиенты"
     )
     image = models.ImageField("Изображение", upload_to="recipes/images/")
-    name = models.CharField("Название рецепта", max_length=200)
+    name = models.CharField("Название рецепта", max_length=MAX_LENGTH_NAME)
     text = models.TextField(
         "Описание рецепта", help_text="Введите описание рецепта"
     )
@@ -58,7 +69,8 @@ class Recipe(models.Model):
         verbose_name="Время приготовления",
         validators=[
             MinValueValidator(
-                1, message="Время приготовления должно быть не менее 1 минуты!"
+                MIN_COOKING_TIME,
+                message="Время приготовления должно быть не менее 1 минуты!",
             )
         ],
     )
@@ -84,7 +96,7 @@ class RecipeIngredient(models.Model):
         Ingredient, on_delete=models.CASCADE, verbose_name="Ингредиент"
     )
     amount = models.IntegerField(
-        "Количество", validators=[MinValueValidator(1)]
+        "Количество", validators=[MinValueValidator(MIN_VALUE_INGREDIENTS)]
     )
 
     class Meta:
@@ -110,49 +122,37 @@ class RecipeTag(models.Model):
         ]
 
 
-class ShoppingCart(models.Model):
+class FavoriteShoppingCart(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         verbose_name="Пользователь",
-        related_name="shopping_cart",
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
-        related_name="shopping_cart",
     )
 
     class Meta:
+        abstract = True
+        constraints = [
+            UniqueConstraint(
+                fields=("user", "recipe"),
+                name="%(app_label)s_%(class)s_unique",
+            )
+        ]
+
+
+class ShoppingCart(FavoriteShoppingCart):
+    class Meta:
+        default_related_name = "shopping_cart"
         verbose_name = "Корзина"
         verbose_name_plural = "Корзины"
-        constraints = [
-            UniqueConstraint(
-                fields=["user", "recipe"], name="user_shoppingcart_unique"
-            )
-        ]
 
 
-class Favorite(models.Model):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name="Пользователь",
-        related_name="favorites",
-    )
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        verbose_name="Рецепт",
-        related_name="favorites",
-    )
-
+class Favorite(FavoriteShoppingCart):
     class Meta:
+        default_related_name = "favorites"
         verbose_name = "Избранное"
         verbose_name_plural = "Избранные"
-        constraints = [
-            UniqueConstraint(
-                fields=["user", "recipe"], name="user_favorite_unique"
-            )
-        ]

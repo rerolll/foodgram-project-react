@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 
@@ -9,7 +9,7 @@ from recipes.models import (
     Recipe,
     RecipeIngredient,
     ShoppingCart,
-    Tag
+    Tag,
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
@@ -30,7 +30,7 @@ from .serializers import (
     ShoppingCartSerializer,
     ShowSubscriptionsSerializer,
     SubscriptionSerializer,
-    TagSerializer
+    TagSerializer,
 )
 
 
@@ -46,18 +46,17 @@ class SubscribeView(APIView):
         serializer = SubscriptionSerializer(
             data=data, context={"request": request}
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
         author = get_object_or_404(User, id=id)
         if Subscription.objects.filter(
             user=request.user, author=author
         ).exists():
-            subscription = get_object_or_404(
-                Subscription, user=request.user, author=author
+            subscription = Subscription.objects.get(
+                user=request.user, author=author
             )
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -80,37 +79,6 @@ class ShowSubscriptionsView(ListAPIView):
             page, many=True, context={"request": request}
         )
         return self.get_paginated_response(serializer.data)
-
-
-class FavoriteView(APIView):
-    """Добавление/удаление рецепта из избранного."""
-
-    permission_classes = [
-        IsAuthenticated,
-    ]
-    pagination_class = CustomPagination
-
-    def post(self, request, id):
-        data = {"user": request.user.id, "recipe": id}
-        if not Favorite.objects.filter(
-            user=request.user, recipe__id=id
-        ).exists():
-            serializer = FavoriteSerializer(
-                data=data, context={"request": request}
-            )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, id):
-        recipe = get_object_or_404(Recipe, id=id)
-        if Favorite.objects.filter(user=request.user, recipe=recipe).exists():
-            Favorite.objects.filter(user=request.user, recipe=recipe).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -154,6 +122,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
     ]
     filterset_class = RecipeFilter
 
+    def get_queryset(self):
+        """Method returns a queryset with required properties."""
+        user = self.request.user
+        if not user.is_anonymous:
+            is_favorited = Favorite.objects.filter(
+                user=user, recipe=OuterRef("id")
+            )
+            is_in_shopping_cart = ShoppingCart.objects.filter(
+                user=user, recipe=OuterRef("id")
+            )
+            return Recipe.objects.prefetch_related("ingredients").annotate(
+                is_favorited=Exists(is_favorited),
+                is_in_shopping_cart=Exists(is_in_shopping_cart),
+            )
+        return Recipe.objects.all()
+
     def get_serializer_class(self):
         if self.request.method == "GET":
             return RecipeSerializer
@@ -165,39 +149,42 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return context
 
 
-class ShoppingCartView(APIView):
-    """Добавление рецепта в корзину или его удаление."""
-
-    permission_classes = [
-        IsAuthenticated,
-    ]
+class BaseFavoriteShoppingCartView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, id):
         data = {"user": request.user.id, "recipe": id}
         recipe = get_object_or_404(Recipe, id=id)
-        if not ShoppingCart.objects.filter(
+        if not self.model.objects.filter(
             user=request.user, recipe=recipe
         ).exists():
-            serializer = ShoppingCartSerializer(
+            serializer = self.serializer_class(
                 data=data, context={"request": request}
             )
-            if serializer.is_valid():
-                serializer.save()
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, id):
         recipe = get_object_or_404(Recipe, id=id)
-        if ShoppingCart.objects.filter(
+        if self.model.objects.filter(
             user=request.user, recipe=recipe
         ).exists():
-            ShoppingCart.objects.filter(
+            self.model.objects.filter(
                 user=request.user, recipe=recipe
             ).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class FavoriteView(BaseFavoriteShoppingCartView):
+    model = Favorite
+    serializer_class = FavoriteSerializer
+
+
+class ShoppingCartView(BaseFavoriteShoppingCartView):
+    model = ShoppingCart
+    serializer_class = ShoppingCartSerializer
 
 
 @api_view(["GET"])
@@ -219,5 +206,5 @@ def download_shopping_cart(request):
             ingredient_list += ", "
     file = "shopping_list"
     response = HttpResponse(ingredient_list, "Content-Type: application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{file}.pdf"'
+    response["Content-Disposition"] = f'attachment; filename="{file}"'
     return response

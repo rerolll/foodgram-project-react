@@ -9,11 +9,14 @@ from recipes.models import (
     RecipeIngredient,
     RecipeTag,
     ShoppingCart,
-    Tag
+    Tag,
 )
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 from users.models import Subscription, User
+
+MIN_VALUE_INGREDIENTS = 1
+MIN_COOKING_TIME = 1
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
@@ -21,7 +24,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "username", "first_name", "last_name", "password"]
+        fields = ("email", "username", "first_name", "last_name", "password")
 
 
 class CustomUserSerializer(UserSerializer):
@@ -31,14 +34,14 @@ class CustomUserSerializer(UserSerializer):
 
     class Meta:
         model = User
-        fields = [
+        fields = (
             "id",
             "email",
             "username",
             "first_name",
             "last_name",
             "is_subscribed",
-        ]
+        )
 
     def get_is_subscribed(self, obj):
         request = self.context.get("request")
@@ -54,7 +57,7 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ["id", "name", "color", "slug"]
+        fields = ("id", "name", "color", "slug")
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -68,7 +71,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ["id", "name", "amount", "measurement_unit"]
+        fields = ("id", "name", "amount", "measurement_unit")
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -76,7 +79,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ingredient
-        fields = ["id", "name", "measurement_unit"]
+        fields = ("id", "name", "measurement_unit")
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -94,7 +97,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = [
+        fields = (
             "id",
             "tags",
             "author",
@@ -105,7 +108,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             "image",
             "text",
             "cooking_time",
-        ]
+        )
 
     def get_ingredients(self, obj):
         ingredients = RecipeIngredient.objects.filter(recipe=obj)
@@ -132,17 +135,18 @@ class AddIngredientRecipeSerializer(serializers.ModelSerializer):
     """Сериализатор добавления ингредиента в рецепт."""
 
     id = serializers.IntegerField()
-    amount = serializers.amount = serializers.IntegerField(
+    amount = serializers.IntegerField(
         validators=(
             MinValueValidator(
-                1, message="Количество ингредиента должно быть 1 или более."
+                MIN_COOKING_TIME,
+                message="Количество ингредиента должно быть 1 или более.",
             ),
         )
     )
 
     class Meta:
         model = RecipeIngredient
-        fields = ["id", "amount"]
+        fields = ("id", "amount")
 
 
 class CreateRecipeSerializer(serializers.ModelSerializer):
@@ -157,7 +161,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = [
+        fields = (
             "id",
             "author",
             "ingredients",
@@ -166,14 +170,14 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
             "name",
             "text",
             "cooking_time",
-        ]
+        )
 
     def validate(self, data):
         ingredients = self.initial_data.get("ingredients")
         list = []
         for i in ingredients:
             amount = i["amount"]
-            if int(amount) < 1:
+            if int(amount) < MIN_VALUE_INGREDIENTS:
                 raise serializers.ValidationError(
                     {"amount": "Количество ингредиента должно быть больше 0!"}
                 )
@@ -185,15 +189,22 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         return data
 
     def create_ingredients(self, ingredients, recipe):
+        recipe_ingredients = []
         for i in ingredients:
             ingredient = Ingredient.objects.get(id=i["id"])
-            RecipeIngredient.objects.create(
+            recipe_ingredient = RecipeIngredient(
                 ingredient=ingredient, recipe=recipe, amount=i["amount"]
             )
+            recipe_ingredients.append(recipe_ingredient)
+            RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
     def create_tags(self, tags, recipe):
+        tag_instances = []
         for tag in tags:
-            RecipeTag.objects.create(recipe=recipe, tag=tag)
+            tag_instance = RecipeTag(recipe=recipe, tag=tag)
+            tag_instances.append(tag_instance)
+
+        RecipeTag.objects.bulk_create(tag_instances)
 
     def create(self, validated_data):
         """
@@ -240,7 +251,7 @@ class ShowFavoriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ["id", "name", "image", "cooking_time"]
+        fields = ("id", "name", "image", "cooking_time")
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
@@ -248,7 +259,7 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCart
-        fields = ["user", "recipe"]
+        fields = ("user", "recipe")
 
     def to_representation(self, instance):
         return ShowFavoriteSerializer(
@@ -261,7 +272,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Favorite
-        fields = ["user", "recipe"]
+        fields = ("user", "recipe")
 
     def to_representation(self, instance):
         return ShowFavoriteSerializer(
@@ -278,7 +289,7 @@ class ShowSubscriptionsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
+        fields = (
             "id",
             "email",
             "username",
@@ -287,7 +298,7 @@ class ShowSubscriptionsSerializer(serializers.ModelSerializer):
             "is_subscribed",
             "recipes",
             "recipes_count",
-        ]
+        )
 
     def get_is_subscribed(self, obj):
         request = self.context.get("request")
@@ -318,11 +329,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ["user", "author"]
+        fields = ("user", "author")
         validators = [
             UniqueTogetherValidator(
                 queryset=Subscription.objects.all(),
-                fields=["user", "author"],
+                fields=("user", "author"),
             )
         ]
 

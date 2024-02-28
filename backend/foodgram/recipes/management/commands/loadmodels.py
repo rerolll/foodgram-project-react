@@ -6,7 +6,6 @@ from recipes.models import Ingredient, Tag
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **options):
         self.stdout.write(self.style.WARNING("Старт команды"))
         with open(
